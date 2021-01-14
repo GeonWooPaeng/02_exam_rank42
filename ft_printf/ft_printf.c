@@ -1,219 +1,235 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ft_printf.c                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: gpaeng <gpaeng@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2021/01/14 16:33:35 by gpaeng            #+#    #+#             */
+/*   Updated: 2021/01/14 16:54:32 by gpaeng           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+//1. %가 나오면 flag(width랑 .precision만) 조사
+//2. s,d,x에 맞춰서 출력을 해줍니다.(조건 중요)
+// <조건>
+// %s
+// va_arg(ap, char *);
+// 1. s == NULL 이면 s = "(null)";
+// 2. dot && precision < len  =>>> len = precision;
+// 3. 빈칸은 width - len
+// 4. 문자는 len
+
+//%d
+// va_arg(ap, int);
+// 1. n == 0 && dot =>>> len = 0;
+// 2. dot && precision > len =>>> zero = precision - len;
+// 3. 빈칸은 width - (zero + len);
+// 4. n == 0 && dot =>>> return ;
+// 5. 숫자는 len;
+
+//%x
+// va_arg(ap, unsigned int)
+// 1. n == 0 && dot =>>> len = 0;
+// 2. dot && precision > len  =>>> len = precision - len;
+// 3. 빈칸은 width - (zero + len);
+// 4. n == 0 && dot =>>> return ;
+// 5. 문자는 len;
 
 #include <stdarg.h>
 #include <unistd.h>
+#include <stdio.h>
 
-typedef struct	s_flags
+typedef struct	s_fopt
 {
-	int		i;
 	int		len;
 	int		width;
 	int		dot;
 	int		precision;
 	int		negative;
 	int		zero_count;
-	int		output;
-	va_list	arg;
-}				t_flags;
+	int		lprint;
+}				t_fopt;
 
-static void	ft_init_flags(t_flags *flags)
+static void	ft_init_flags(t_fopt *fopt)
 {
-	flags->i = 0;
-	flags->output = 0;
+	fopt->len = 0;
+	fopt->width = 0;
+	fopt->dot = 0;
+	fopt->precision = 0;
+	fopt->negative = 0;
+	fopt->zero_count = 0;
 }
 
-static void	ft_clear_flags(t_flags *flags)
-{
-	flags->len = 0;
-	flags->width = 0;
-	flags->dot = 0;
-	flags->precision = 0;
-	flags->negative = 0;
-	flags->zero_count = 0;
-}
-
-static void	ft_putchar(char c)
+static void	ft_putchar(char c, t_fopt *fopt)
 {
 	write(1, &c, 1);
+	fopt->lprint += 1;
 }
 
-static void	ft_putstr_len(const char *s, const int max_i)
+static void	ft_putnstr(t_fopt *fopt, const char *s, const int n)
 {
-	int i;
+	int idx;
 
-	i = 0;
-	while (i < max_i && s[i])
+	idx = 0;
+	while (idx < n && s[idx])
 	{
-		ft_putchar(s[i]);
-		i++;
+		ft_putchar(s[idx], fopt);
+		idx++;
 	}
 }
 
 static int	ft_strlen(const char *s)
 {
-	int	i;
+	int	idx;
 
-	i = 0;
-	while (s[i])
-		i++;
-	return (i);
+	idx = 0;
+	while (s[idx])
+		idx++;
+	return (idx);
 }
 
-static int	ft_longlen_base(long nbr, int base_len)
+static int	ft_baselen(long n, int base_len)
 {
-	int i;
+	int idx;
 
-	i = 1;
-	while (nbr >= base_len)
+	idx = 1;
+	while (n >= base_len)
 	{
-		nbr /= base_len;
-		i++;
+		n /= base_len;
+		idx++;
 	}
-	return (i);
+	return (idx);
 }
 
-static void	ft_putnbr_base(long nbr, int base_len, const char *base)
+static void	ft_putnbr_base(t_fopt *fopt, long n, int base_len, const char *base)
 {
-	// if (nbr >= base_len)
-	// {
-	// 	ft_putnbr_base(nbr / base_len, base_len, base);
-	// 	ft_putnbr_base(nbr % base_len, base_len, base);
-	// }
-	// else
-	// 	ft_putchar(base[nbr]);
-	if (nbr >= base_len)
-		ft_putnbr_base(nbr / base_len, base_len, base);
-	ft_putchar(base[nbr % base_len])
+	if (n >= base_len)
+		ft_putnbr_base(fopt, n / base_len, base_len, base);
+	ft_putchar(base[n % base_len], fopt);
 }
 
-static void	ft_print_until(const char *s, char c, t_flags *flags)
+static void	ft_print_char(t_fopt *fopt, int len, char c)
 {
-	while (s[flags->i] && s[flags->i] != c)
+	int	idx;
+
+	idx = 0;
+	while (idx < len)
 	{
-		ft_putchar(s[flags->i]);
-		flags->i++;
-		flags->output++;
+		ft_putchar(c, fopt);
+		idx++;
 	}
 }
 
-static void	_discover_flags(const char *s, t_flags *flags)
+static void	ft_check_flags(char **str, t_fopt *fopt)
 {
-	flags->i++;
-	if (s[flags->i] >= '0' && s[flags->i] <= '9')
+	(*str)++;
+	if (**str >= '0' && **str <= '9')
 	{
-		while (s[flags->i] >= '0' && s[flags->i] <= '9')
+		while (**str >= '0' && **str <= '9')
 		{
-			flags->width = (flags->width * 10) + (s[flags->i] - 48);
-			flags->i++;
+			fopt->width = (fopt->width * 10) + (**str - '0');
+			(*str)++;
 		}
 	}
-	if (s[flags->i] == '.')
+	if (**str == '.')
 	{
-		flags->i++;
-		flags->dot = 1;
-		while (s[flags->i] >= '0' && s[flags->i] <= '9')
+		(*str)++;
+		fopt->dot = 1;
+		while (**str >= '0' && **str <= '9')
 		{
-			flags->precision = (flags->precision * 10) + (s[flags->i] - 48);
-			flags->i++;
+			fopt->precision = (fopt->precision * 10) + (**str - '0');
+			(*str)++;
 		}
 	}
 }
 
-static void	ft_print_x_char(int len, char c, t_flags **flags)
-{
-	int	i;
-
-	i = 0;
-	while (i < len)
-	{
-		ft_putchar(c);
-		(**flags).output++;
-		i++;
-	}
-}
-
-static void	ft_print_s(t_flags *flags)
+static void	ft_print_s(va_list ap, char **str, t_fopt *fopt)
 {
 	char	*s;
 
-	flags->i++;
-	s = va_arg(flags->arg, char *);
+	(*str)++;
+	s = va_arg(ap, char *);
 	if (!s)
 		s = "(null)";
-	flags->len = ft_strlen(s);
-	if (flags->dot && flags->precision < flags->len)
-		flags->len = flags->precision;
-	ft_print_x_char(flags->width - flags->len, ' ', &flags);
-	ft_putstr_len(s, flags->len);
-	flags->output += flags->len;
+	fopt->len = ft_strlen(s);
+	if (fopt->dot && fopt->precision < fopt->len)
+		fopt->len = fopt->precision;
+	ft_print_char(fopt, fopt->width - fopt->len, ' ');
+	ft_putnstr(fopt, s, fopt->len);
 }
 
-static void	ft_print_d(t_flags *flags)
+static void	ft_print_d(va_list ap, char **str, t_fopt *fopt)
 {
-	long	nbr;
+	long	n;
 
-	flags->i++;
-	nbr = va_arg(flags->arg, int);
-	if (nbr < 0)
+	(*str)++;
+	n = va_arg(ap, int);
+	if (n < 0)
 	{
-		flags->negative = 1;
-		nbr *= -1;
+		fopt->negative = 1;
+		n *= -1;
 	}
-	flags->len = ft_longlen_base(nbr, 10);
-	if (nbr == 0 && flags->dot)
-		flags->len = 0;
-	if (flags->dot && flags->precision > flags->len)
-		flags->zero_count = flags->precision - flags->len;
-	if (flags->negative)
-		flags->len++;
-	ft_print_x_char(flags->width - (flags->zero_count + flags->len), ' ', &flags);
-	if (flags->negative)
-		ft_putchar('-');
-	ft_print_x_char(flags->zero_count, '0', &flags);
-	if (flags->dot && nbr == 0)
+	fopt->len = ft_baselen(n, 10);
+	if (n == 0 && fopt->dot)
+		fopt->len = 0;
+	if (fopt->dot && fopt->precision > fopt->len)
+		fopt->zero_count = fopt->precision - fopt->len;
+	ft_print_char(fopt, fopt->width - (fopt->zero_count + fopt->len), ' ');
+	fopt->negative ? ft_putchar('-', fopt) : 0;
+	ft_print_char(fopt, fopt->zero_count, '0');
+	if (fopt->dot && n == 0)
 		return ;
-	ft_putnbr_base(nbr, 10, "0123456789");
-	flags->output += flags->len;
+	ft_putnbr_base(fopt, n, 10, "0123456789");
 }
 
-static void	ft_print_x(t_flags *flags)
+static void	ft_print_x(va_list ap, char **str, t_fopt *fopt)
 {
-	unsigned int	nbr;
+	unsigned int	n;
 
-	flags->i++;
-	nbr = va_arg(flags->arg, unsigned int);
-	flags->len = ft_longlen_base(nbr, 16);
-	if (nbr == 0 && flags->dot)
-		flags->len = 0;
-	if (flags->dot && flags->precision > flags->len)
-		flags->zero_count = flags->precision - flags->len;
-	ft_print_x_char(flags->width - (flags->zero_count + flags->len), ' ', &flags);
-	ft_print_x_char(flags->zero_count, '0', &flags);
-	if (flags->dot && nbr == 0)
+	(*str)++;
+	n = va_arg(ap, unsigned int);
+	fopt->len = ft_baselen(n, 16);
+	if (n == 0 && fopt->dot)
+		fopt->len = 0;
+	if (fopt->dot && fopt->precision > fopt->len)
+		fopt->zero_count = fopt->precision - fopt->len;
+	ft_print_char(fopt, fopt->width - (fopt->zero_count + fopt->len), ' ');
+	ft_print_char(fopt, fopt->zero_count, '0');
+	if (fopt->dot && n == 0)
 		return ;
-	ft_putnbr_base(nbr, 16, "0123456789abcdef");
-	flags->output += flags->len;
+	ft_putnbr_base(fopt, n, 16, "0123456789abcdef");
 }
 
-int			ft_printf(const char *fmt, ...)
+int			ft_printf(const char *str, ...)
 {
-	t_flags	flags;
+	t_fopt	fopt;
+	va_list ap;
+	char *strptr;
 
-	ft_init_flags(&flags);
-	va_start(flags.arg, fmt);
-	while (fmt[flags.i])
+	va_start(ap, str);
+	strptr = (char *)str;
+	ft_init_flags(&fopt);
+	fopt.lprint = 0;
+	while (*strptr)
 	{
-		ft_clear_flags(&flags);
-		ft_print_until(fmt, '%', &flags);
-		if (fmt[flags.i])
+		if (*strptr == '%')
 		{
-			_discover_flags(fmt, &flags);
-			if (fmt[flags.i] == 's')
-				ft_print_s(&flags);
-			else if (fmt[flags.i] == 'd')
-				ft_print_d(&flags);
-			else if (fmt[flags.i] == 'x')
-				ft_print_x(&flags);
+			ft_check_flags(&strptr, &fopt);
+			if (*strptr == 's')
+				ft_print_s(ap, &strptr, &fopt);
+			else if (*strptr == 'd')
+				ft_print_d(ap, &strptr, &fopt);
+			else if (*strptr == 'x')
+				ft_print_x(ap, &strptr, &fopt);
+			ft_init_flags(&fopt);
+		}
+		else
+		{
+			ft_putchar(*strptr, &fopt);
+			strptr++;
 		}
 	}
-	return (flags.output);
+	va_end(ap);
+	return (fopt.lprint);
 }
