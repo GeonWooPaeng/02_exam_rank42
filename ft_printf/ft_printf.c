@@ -6,7 +6,7 @@
 /*   By: gpaeng <gpaeng@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/14 16:33:35 by gpaeng            #+#    #+#             */
-/*   Updated: 2021/01/14 16:54:32 by gpaeng           ###   ########.fr       */
+/*   Updated: 2021/01/14 17:32:26 by gpaeng           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ static int	ft_strlen(const char *s)
 	return (idx);
 }
 
-static int	ft_baselen(long n, int base_len)
+static int	ft_num_baselen(long n, int base_len)
 {
 	int idx;
 
@@ -170,7 +170,7 @@ static void	ft_print_d(va_list ap, char **str, t_fopt *fopt)
 		fopt->negative = 1;
 		n *= -1;
 	}
-	fopt->len = ft_baselen(n, 10);
+	fopt->len = ft_num_baselen(n, 10);
 	if (n == 0 && fopt->dot)
 		fopt->len = 0;
 	if (fopt->dot && fopt->precision > fopt->len)
@@ -189,7 +189,7 @@ static void	ft_print_x(va_list ap, char **str, t_fopt *fopt)
 
 	(*str)++;
 	n = va_arg(ap, unsigned int);
-	fopt->len = ft_baselen(n, 16);
+	fopt->len = ft_num_baselen(n, 16);
 	if (n == 0 && fopt->dot)
 		fopt->len = 0;
 	if (fopt->dot && fopt->precision > fopt->len)
