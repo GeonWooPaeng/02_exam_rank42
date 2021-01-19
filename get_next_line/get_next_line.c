@@ -6,7 +6,7 @@
 /*   By: gpaeng <gpaeng@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/02 14:43:25 by gpaeng            #+#    #+#             */
-/*   Updated: 2021/01/16 13:14:45 by gpaeng           ###   ########.fr       */
+/*   Updated: 2021/01/19 17:22:32 by gpaeng           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ char	*ft_make_line(char **arr, int *check)
 int		get_next_line(char **line)
 {
 	static char *arr;
-	char		buf[1];
+	char		buf[256];
 	ssize_t		nr;
 	int			check;
 

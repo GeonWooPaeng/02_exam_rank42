@@ -6,7 +6,7 @@
 /*   By: gpaeng <gpaeng@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/14 16:33:35 by gpaeng            #+#    #+#             */
-/*   Updated: 2021/01/16 13:45:36 by gpaeng           ###   ########.fr       */
+/*   Updated: 2021/01/19 00:06:18 by gpaeng           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,16 +25,19 @@
 // 1. n == 0 && dot =>>> len = 0;
 // 2. dot && precision > len =>>> zero = precision - len;
 // 3. 빈칸은 width - (zero + len);
-// 4. n == 0 && dot =>>> return ;
-// 5. 숫자는 len;
+// 4. '0'은 zero;
+// 5. 음수면 '-' 
+// 6. n == 0 && dot =>>> return ;
+// 7. 숫자는 len;
 
 //%x
 // va_arg(ap, unsigned int)
 // 1. n == 0 && dot =>>> len = 0;
 // 2. dot && precision > len  =>>> len = precision - len;
 // 3. 빈칸은 width - (zero + len);
-// 4. n == 0 && dot =>>> return ;
-// 5. 문자는 len;
+// 4.'0'은 zero;
+// 5. n == 0 && dot =>>> return ;
+// 6. 문자는 len;
 
 #include <stdarg.h>
 #include <unistd.h>
